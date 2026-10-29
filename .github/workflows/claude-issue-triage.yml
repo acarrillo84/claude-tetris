@@ -68,7 +68,11 @@ jobs:
             - prioridad: alta (rompe el juego o bloquea), media, baja (cosmético o menor).
             - extras: solo si aplican: "good first issue", "help wanted", "duplicate", "invalid".
             - diagnostico: Markdown en español, pensado para que un desarrollador implemente
-              después la solución, con estas secciones:
+              después la solución. Se publica tal cual como comentario del issue, así que debe
+              ser GitHub Flavored Markdown válido que GitHub renderice correctamente: encabezados
+              `###`, listas, `código en línea`, bloques de código con triple backtick e
+              identificador de lenguaje (```js), y tablas GFM si ayudan. No envuelvas toda la
+              respuesta en un bloque de código ni escapes los saltos de línea. Usa estas secciones:
               ### Resumen
               ### Causa probable / análisis
               ### Archivos y funciones involucradas  (usa referencias `archivo:línea`)
