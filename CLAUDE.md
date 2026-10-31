@@ -28,6 +28,8 @@ Key points in `game.js` that span multiple functions:
 - **Game loop:** `loop()` runs on `requestAnimationFrame`, accumulating `dt` into `dropAccum` and applying gravity when it exceeds `dropInterval`. Pause and game over stop the loop via `cancelAnimationFrame(animId)`; resuming resets `lastTime` before restarting. `init()` fully resets state and is also the restart button handler.
 - **Rendering** redraws everything each frame: grid → locked board → ghost (`alpha 0.2`) → current piece. The next-piece preview (`drawNext`) is drawn only on `spawn()` and assumes a 4×4 grid of 30px cells (matching the 120×120 `#next-canvas`).
 
+- **Theming:** colors live in CSS variables (`:root` = dark, `[data-theme="light"]` = light) in `style.css`. `applyTheme()` in `game.js` sets `data-theme` on `<html>`, persists to `localStorage('theme')`, and caches `--grid`/`--highlight` into `themeColors` for canvas drawing (canvas doesn't inherit CSS). Default is dark. The header toggle (`#theme-toggle`) blurs after click so Space doesn't re-trigger it.
+
 ## Gotchas
 
 - `COLS × BLOCK` and `ROWS × BLOCK` must match the `width`/`height` attributes of `<canvas id="board">` in `index.html` (currently 300×600). Changing board constants requires editing both.
