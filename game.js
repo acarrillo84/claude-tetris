@@ -275,6 +275,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return; // endGame() ocurrió en este frame: no reprogramar el bucle
   animId = requestAnimationFrame(loop);
 }
 
