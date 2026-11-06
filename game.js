@@ -42,6 +42,7 @@ const restartBtn = document.getElementById('restart-btn');
 
 const themeToggle = document.getElementById('theme-toggle');
 const themeLabel = document.getElementById('theme-label');
+const skinSelect = document.getElementById('skin-select');
 const themeColors = { grid: '#22222e', highlight: 'rgba(255,255,255,0.12)' };
 
 function applyTheme(theme, persist) {
@@ -180,14 +181,10 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  context.save();
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = themeColors.highlight;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  SKINS[currentSkin].draw(context, x * size, y * size, size, SKINS[currentSkin].palette[colorIndex]);
+  context.restore(); // restablece globalAlpha, shadowBlur, etc.
 }
 
 function drawGrid() {
@@ -298,6 +295,10 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.target === skinSelect) { // las teclas del juego no deben operar el selector
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+    skinSelect.blur();
+  }
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -333,5 +334,102 @@ themeToggle.addEventListener('click', () => {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem('theme'); } catch (e) { /* ignorar */ }
 applyTheme(savedTheme === 'light' ? 'light' : 'dark', false);
+
+// ---- Skins ----
+const SKINS = {
+  retro: {
+    palette: COLORS,
+    draw(ctx, px, py, s, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(px + 1, py + 1, s - 2, s - 2);
+      ctx.fillStyle = themeColors.highlight;
+      ctx.fillRect(px + 1, py + 1, s - 2, 4);
+    },
+  },
+  neon: {
+    palette: [null, '#00f0ff', '#fff700', '#d400ff', '#39ff14', '#ff1744', '#4d7cff', '#ff9100'],
+    draw(ctx, px, py, s, color) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px + 3, py + 3, s - 6, s - 6);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha *= 0.35;
+      ctx.fillStyle = color;
+      ctx.fillRect(px + 3, py + 3, s - 6, s - 6);
+    },
+  },
+  pastel: {
+    palette: [null, '#a8e6ef', '#fff1a8', '#d8b4f0', '#b7e4c7', '#f7b2b2', '#b5d0f5', '#ffd3a5'],
+    draw(ctx, px, py, s, color) {
+      const r = s * 0.28;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(px + 1 + r, py + 1);
+      ctx.arcTo(px + s - 1, py + 1, px + s - 1, py + s - 1, r);
+      ctx.arcTo(px + s - 1, py + s - 1, px + 1, py + s - 1, r);
+      ctx.arcTo(px + 1, py + s - 1, px + 1, py + 1, r);
+      ctx.arcTo(px + 1, py + 1, px + s - 1, py + 1, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; // contorno: contraste sobre fondo claro
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      ctx.arc(px + s * 0.32, py + s * 0.32, s * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    },
+  },
+  pixel: {
+    palette: [null, '#29b6f6', '#fbc02d', '#8e44ad', '#43a047', '#e53935', '#3f6fd8', '#fb8c00'],
+    draw(ctx, px, py, s, color) {
+      const u = Math.max(2, Math.floor(s / 10));
+      ctx.fillStyle = color;
+      ctx.fillRect(px, py, s, s);
+      // bisel claro arriba/izquierda, oscuro abajo/derecha
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillRect(px, py, s, u);
+      ctx.fillRect(px, py, u, s);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(px, py + s - u, s, u);
+      ctx.fillRect(px + s - u, py, u, s);
+      // textura de damero
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      for (let i = 1; i < s / u - 1; i++)
+        for (let j = 1; j < s / u - 1; j++)
+          if ((i + j) % 2 === 0) ctx.fillRect(px + i * u, py + j * u, u, u);
+    },
+  },
+};
+let currentSkin = 'retro';
+
+function applySkin(name, persist) {
+  if (!SKINS[name]) name = 'retro';
+  currentSkin = name;
+  document.documentElement.dataset.skin = name;
+  skinSelect.value = name;
+  const styles = getComputedStyle(document.documentElement);
+  themeColors.grid = styles.getPropertyValue('--grid').trim();
+  themeColors.highlight = styles.getPropertyValue('--highlight').trim();
+  if (persist) {
+    try { localStorage.setItem('skin', name); } catch (e) { /* ignorar */ }
+  }
+  if (typeof current !== 'undefined' && current) {
+    draw();
+    if (next) drawNext();
+  }
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value, true);
+  skinSelect.blur(); // evita que Space cambie la selección
+});
+
+let savedSkin = null;
+try { savedSkin = localStorage.getItem('skin'); } catch (e) { /* ignorar */ }
+applySkin(savedSkin, false);
+// ---- Fin Skins ----
 
 init();
